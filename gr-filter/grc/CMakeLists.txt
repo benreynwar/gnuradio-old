@@ -25,6 +25,7 @@ install(FILES
     filter_delay_fc.xml
     fractional_interpolator_xx.xml
     freq_xlating_fir_filter_xxx.xml
+    generic_filterbank_vcvcf.xml
     hilbert_fc.xml
     iir_filter_ffd.xml
     interp_fir_filter_xxx.xml

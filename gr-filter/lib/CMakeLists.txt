@@ -126,6 +126,7 @@ list(APPEND filter_sources
   fft_filter_fff_impl.cc
   fractional_interpolator_cc_impl.cc
   fractional_interpolator_ff_impl.cc
+  generic_filterbank_vcvcf_impl.cc
   hilbert_fc_impl.cc
   iir_filter_ffd_impl.cc
   pfb_arb_resampler_ccf_impl.cc

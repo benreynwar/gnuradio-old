@@ -52,6 +52,7 @@
 #include "filter/freq_xlating_fir_filter_scf.h"
 #include "filter/freq_xlating_fir_filter_scc.h"
 #include "filter/hilbert_fc.h"
+#include "filter/generic_filterbank_vcvcf.h"
 #include "filter/iir_filter_ffd.h"
 #include "filter/interp_fir_filter_ccc.h"
 #include "filter/interp_fir_filter_ccf.h"
@@ -100,6 +101,7 @@
 %include "filter/freq_xlating_fir_filter_scf.h"
 %include "filter/freq_xlating_fir_filter_scc.h"
 %include "filter/hilbert_fc.h"
+%include "filter/generic_filterbank_vcvcf.h"
 %include "filter/iir_filter_ffd.h"
 %include "filter/interp_fir_filter_ccc.h"
 %include "filter/interp_fir_filter_ccf.h"
@@ -144,6 +146,7 @@ GR_SWIG_BLOCK_MAGIC2(filter, freq_xlating_fir_filter_fcc);
 GR_SWIG_BLOCK_MAGIC2(filter, freq_xlating_fir_filter_fcf);
 GR_SWIG_BLOCK_MAGIC2(filter, freq_xlating_fir_filter_scf);
 GR_SWIG_BLOCK_MAGIC2(filter, freq_xlating_fir_filter_scc);
+GR_SWIG_BLOCK_MAGIC2(filter, generic_filterbank_vcvcf);
 GR_SWIG_BLOCK_MAGIC2(filter, hilbert_fc);
 GR_SWIG_BLOCK_MAGIC2(filter, iir_filter_ffd);
 GR_SWIG_BLOCK_MAGIC2(filter, interp_fir_filter_ccc);
