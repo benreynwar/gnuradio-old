@@ -26,5 +26,6 @@ processing blocks for FILTER and related functions.
 
 from filter_swig import *
 from rational_resampler import *
+from pfb_channelizer_hier_ccf import pfb_channelizer_hier_ccf
 import pfb
 import optfir
