@@ -31,6 +31,7 @@ install(FILES
     interp_fir_filter_xxx.xml
     pfb_arb_resampler.xml
     pfb_channelizer.xml
+    pfb_channelizer_hier.xml
     pfb_decimator.xml
     pfb_interpolator.xml
     pfb_synthesizer.xml
