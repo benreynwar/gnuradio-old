@@ -104,6 +104,14 @@ endif(MSVC)
 ########################################################################
 include(GrPlatform) #define LIB_SUFFIX
 set(GR_RUNTIME_DIR      bin)
+########################################################################
+# FreeBSD needs libiconv
+########################################################################
+if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+set(GR_PKGCONFIG_DIR      libdata${LIB_SUFFIX})
+else()
+set(GR_PKGCONFIG_DIR      lib${LIB_SUFFIX})
+endif()
 set(GR_LIBRARY_DIR      lib${LIB_SUFFIX})
 set(GR_INCLUDE_DIR      include)
 set(GR_DATA_DIR         share)
@@ -150,6 +158,22 @@ add_custom_target(uninstall
     ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake
 )
 
+########################################################################
+# FreeBSD needs libiconv
+########################################################################
+if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+  message( "-- Adding iconv for FreeBSD")
+
+  find_path(ICONV_INCLUDE_DIR
+    NAMES iconv.h
+    PATHS /usr/local/include ${ICONV_INCLUDE_DIRS}
+  )
+
+  find_library(ICONV_LIBRARY
+    NAMES iconv
+    PATHS /usr/local/lib ${ICONV_LIB_DIRS}
+  )
+endif()
 ########################################################################
 # Enable python component
 ########################################################################
@@ -235,12 +259,13 @@ GR_LOGGING()
 ########################################################################
 # Distribute the README file
 ########################################################################
+if(ENABLE_DOCS)
 install(
     FILES README README.hacking
     DESTINATION ${GR_PKG_DOC_DIR}
     COMPONENT "docs"
 )
-
+endif(ENABLE_DOCS)
 ########################################################################
 # The following dependency libraries are needed by all gr modules:
 ########################################################################

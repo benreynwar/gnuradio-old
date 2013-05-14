@@ -97,7 +97,7 @@ configure_file(
 
 install(
     FILES ${CMAKE_CURRENT_BINARY_DIR}/volk.pc
-    DESTINATION lib${LIB_SUFFIX}/pkgconfig
+    DESTINATION ${GR_PKGCONFIG_DIR}/pkgconfig
     COMPONENT "volk_devel"
 )
 
