@@ -25,8 +25,13 @@ add_subdirectory(gruimpl)
 add_subdirectory(blks2)
 add_subdirectory(blks2impl)
 
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/__init__.py.in
+    ${CMAKE_CURRENT_BINARY_DIR}/__init__.py
+@ONLY)
+
 GR_PYTHON_INSTALL(FILES
-    __init__.py
+    ${CMAKE_CURRENT_BINARY_DIR}/__init__.py
     eng_notation.py
     eng_option.py
     gr_unittest.py
