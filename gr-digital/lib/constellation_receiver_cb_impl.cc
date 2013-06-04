@@ -45,14 +45,14 @@ namespace gr {
 	(new constellation_receiver_cb_impl(constell, loop_bw,
 					    fmin, fmax));
     }
- 
+
     static int ios[] = {sizeof(char), sizeof(float), sizeof(float), sizeof(float), sizeof(gr_complex)};
     static std::vector<int> iosig(ios, ios+sizeof(ios)/sizeof(int));
     constellation_receiver_cb_impl::constellation_receiver_cb_impl(constellation_sptr constellation, 
 								   float loop_bw, float fmin, float fmax)
       : block("constellation_receiver_cb",
-		 io_signature::make(1, 1, sizeof(gr_complex)),
-		 io_signature::makev(1, 5, iosig)),
+              io_signature::make(1, 1, sizeof(gr_complex)),
+              io_signature::makev(1, 5, iosig)),
 	blocks::control_loop(loop_bw, fmax, fmin),
 	d_constellation(constellation),
 	d_current_const_point(0)
@@ -98,10 +98,10 @@ namespace gr {
       float *out_err = 0, *out_phase = 0, *out_freq = 0;
       gr_complex *out_symbol;
       if(output_items.size() == 5) {
-	out_err = (float*)output_items[1];
-	out_phase = (float*)output_items[2];
-	out_freq = (float*)output_items[3];
-	out_symbol = (gr_complex*)output_items[4];
+        out_err = (float*)output_items[1];
+        out_phase = (float*)output_items[2];
+        out_freq = (float*)output_items[3];
+        out_symbol = (gr_complex*)output_items[4];
       }
 
       while((i < noutput_items) && (i < ninput_items[0])) {
@@ -114,10 +114,10 @@ namespace gr {
 
 	out[i] = sym_value;
 
-	if(output_items.size() == 5) {
-	  out_err[i] = phase_error;
-	  out_phase[i] = d_phase;
-	  out_freq[i] = d_freq;
+	if(output_items.size() == 2) {
+          out_err[i] = phase_error;
+          out_phase[i] = d_phase;
+          out_freq[i] = d_freq;
 	  out_symbol[i] = sample;
 	}
 	i++;
@@ -126,6 +126,47 @@ namespace gr {
       consume_each(i);
       return i;
     }
+
+    void
+    constellation_receiver_cb_impl::setup_rpc()
+    {
+#ifdef GR_CTRLPORT
+      // Getters
+      add_rpc_variable(
+          rpcbasic_sptr(new rpcbasic_register_get<control_loop, float>(
+	      alias(), "frequency",
+	      &control_loop::get_frequency,
+	      pmt::mp(0.0f), pmt::mp(2.0f), pmt::mp(0.0f),
+	      "", "Frequency Est.", RPC_PRIVLVL_MIN,
+              DISPTIME | DISPOPTSTRIP)));
+
+      add_rpc_variable(
+          rpcbasic_sptr(new rpcbasic_register_get<control_loop, float>(
+	      alias(), "phase",
+	      &control_loop::get_phase,
+	      pmt::mp(0.0f), pmt::mp(2.0f), pmt::mp(0.0f),
+	      "", "Phase Est.", RPC_PRIVLVL_MIN,
+              DISPTIME | DISPOPTSTRIP)));
+
+      add_rpc_variable(
+          rpcbasic_sptr(new rpcbasic_register_get<control_loop, float>(
+	      alias(), "loop_bw",
+	      &control_loop::get_loop_bandwidth,
+	      pmt::mp(0.0f), pmt::mp(2.0f), pmt::mp(0.0f),
+	      "", "Loop bandwidth", RPC_PRIVLVL_MIN,
+              DISPTIME | DISPOPTSTRIP)));
+    
+      // Setters
+      add_rpc_variable(
+          rpcbasic_sptr(new rpcbasic_register_set<control_loop, float>(
+	      alias(), "loop bw",
+	      &control_loop::set_loop_bandwidth,
+	      pmt::mp(0.0f), pmt::mp(1.0f), pmt::mp(0.0f),
+	      "", "Loop bandwidth",
+	      RPC_PRIVLVL_MIN, DISPNULL)));
+#endif /* GR_CTRLPORT */
+    }
+    
 
   } /* namespace digital */
 } /* namespace gr */
