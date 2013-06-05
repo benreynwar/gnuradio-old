@@ -26,7 +26,9 @@
 #include <gnuradio/digital/api.h>
 #include <gnuradio/digital/metric_type.h>
 #include <boost/enable_shared_from_this.hpp>
+#include <boost/any.hpp>
 #include <gnuradio/gr_complex.h>
+#include <pmt/pmt.h>
 #include <vector>
 
 namespace gr {
@@ -107,18 +109,23 @@ namespace gr {
 
       unsigned int bits_per_symbol()
       {
-	return floor(log(double(d_constellation.size()))/d_dimensionality/log(2.0));
+        return floor(log(double(d_constellation.size()))/d_dimensionality/log(2.0));
       }
   
       unsigned int arity()
       {
-	return d_arity;
+        return d_arity;
       }
 
       constellation_sptr base()
       {
-	return shared_from_this();
+        return shared_from_this();
       }  
+
+      pmt::pmt_t as_pmt()
+      {
+        return pmt::make_any(boost::any(base()));
+      }
 
     protected:
       std::vector<gr_complex> d_constellation;
