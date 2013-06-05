@@ -30,6 +30,7 @@
 #include "pfb_clock_sync_ccf_impl.h"
 #include <gnuradio/io_signature.h>
 #include <gnuradio/math.h>
+#include <boost/format.hpp>
 
 namespace gr {
   namespace digital {
@@ -116,6 +117,14 @@ namespace gr {
       return noutputs == 1 || noutputs == 4;
     }
 
+    void
+    pfb_clock_sync_ccf_impl::forecast(int noutput_items,
+                                      gr_vector_int &ninput_items_required)
+    {
+      unsigned ninputs = ninput_items_required.size ();
+      for(unsigned i = 0; i < ninputs; i++)
+        ninput_items_required[i] = (noutput_items + history()) * (d_sps/d_osps);
+    }
 
     /*******************************************************************
      SET FUNCTIONS
@@ -387,14 +396,11 @@ namespace gr {
 	return 0;		     // history requirements may have changed.
       }
 
-      // We need this many to process one output
-      int nrequired = ninput_items[0] - d_taps_per_filter - d_osps;
-
       int i = 0, count = 0;
       float error_r, error_i;
 
       // produce output as long as we can and there are enough input samples
-      while((i < noutput_items) && (count < nrequired)) {
+      while(i < noutput_items) {
 	while(d_out_idx < d_osps) {
 	  d_filtnum = (int)floor(d_k);
 
