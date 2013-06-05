@@ -98,6 +98,8 @@ namespace gr {
       create_diff_taps(taps, dtaps);
       set_taps(taps, d_taps, d_filters);
       set_taps(dtaps, d_dtaps, d_diff_filters);
+
+      set_relative_rate((float)d_osps/(float)d_sps);
     }
 
     pfb_clock_sync_fff_impl::~pfb_clock_sync_fff_impl()
