@@ -9,7 +9,8 @@ namespace gr {
     public:
       tag_checker(std::vector<tag_t> &tags) {
         d_tags = tags;
-        if (tags.size() > 0) {
+        std::sort(d_tags.begin(), d_tags.end(), &gr::tag_t::offset_compare);
+        if (d_tags.size() > 0) {
           d_has_next_tag = true;
           d_next_tag_index = 0;
           d_next_tag = tags[0];
