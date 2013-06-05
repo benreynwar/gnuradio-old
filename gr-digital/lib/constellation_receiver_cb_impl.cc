@@ -47,17 +47,17 @@ namespace gr {
         (new constellation_receiver_cb_impl(constell, loop_bw,
 					    fmin, fmax));
     }
- 
+
     static int ios[] = {sizeof(char), sizeof(float), sizeof(float), sizeof(float), sizeof(gr_complex)};
     static std::vector<int> iosig(ios, ios+sizeof(ios)/sizeof(int));
     constellation_receiver_cb_impl::constellation_receiver_cb_impl(constellation_sptr constellation, 
 								   float loop_bw, float fmin, float fmax)
       : block("constellation_receiver_cb",
-		 io_signature::make(1, 1, sizeof(gr_complex)),
-		 io_signature::makev(1, 5, iosig)),
-	blocks::control_loop(loop_bw, fmax, fmin),
-	d_constellation(constellation),
-	d_current_const_point(0)
+              io_signature::make(1, 1, sizeof(gr_complex)),
+              io_signature::makev(1, 5, iosig)),
+        blocks::control_loop(loop_bw, fmax, fmin),
+        d_constellation(constellation),
+        d_current_const_point(0)
     {
       if(d_constellation->dimensionality() != 1)
         throw std::runtime_error("This receiver only works with constellations of dimension 1.");
@@ -90,7 +90,6 @@ namespace gr {
     void
     constellation_receiver_cb_impl::set_phase_freq(float phase, float freq)
     {
-      //FIXME:: Should we be locking the block here.
       d_phase = phase;
       d_freq = freq;
     }
@@ -101,7 +100,6 @@ namespace gr {
       boost::any constellation_any = pmt::any_ref(constellation_pmt);
       constellation_sptr constellation = boost::any_cast<constellation_sptr>(
         constellation_any);
-      // FIXME: Should we be locking the block here.
       set_constellation(constellation);
     }
 
@@ -109,7 +107,6 @@ namespace gr {
     void
     constellation_receiver_cb_impl::set_constellation(constellation_sptr constellation)
     {
-      // FIXME: Should we be locking the block here.
       d_constellation = constellation;
     }
 
@@ -149,7 +146,7 @@ namespace gr {
           tag_t tag = tags_now[j];
           dispatch_msg(tag.key, tag.value);
         }
-
+        
         sample = in[i];
         nco = gr_expj(d_phase);   // get the NCO value for derotating the current sample
         sample = nco*sample;      // get the downconverted symbol
@@ -159,18 +156,60 @@ namespace gr {
         
         out[i] = sym_value;
         
-        if(output_items.size() == 5) {
+        if(output_items.size() == 2) {
           out_err[i] = phase_error;
           out_phase[i] = d_phase;
           out_freq[i] = d_freq;
           out_symbol[i] = sample;
         }
         i++;
+        
       }
 
       consume_each(i);
       return i;
     }
+
+    void
+    constellation_receiver_cb_impl::setup_rpc()
+    {
+#ifdef GR_CTRLPORT
+      // Getters
+      add_rpc_variable(
+          rpcbasic_sptr(new rpcbasic_register_get<control_loop, float>(
+	      alias(), "frequency",
+	      &control_loop::get_frequency,
+	      pmt::mp(0.0f), pmt::mp(2.0f), pmt::mp(0.0f),
+	      "", "Frequency Est.", RPC_PRIVLVL_MIN,
+              DISPTIME | DISPOPTSTRIP)));
+
+      add_rpc_variable(
+          rpcbasic_sptr(new rpcbasic_register_get<control_loop, float>(
+	      alias(), "phase",
+	      &control_loop::get_phase,
+	      pmt::mp(0.0f), pmt::mp(2.0f), pmt::mp(0.0f),
+	      "", "Phase Est.", RPC_PRIVLVL_MIN,
+              DISPTIME | DISPOPTSTRIP)));
+
+      add_rpc_variable(
+          rpcbasic_sptr(new rpcbasic_register_get<control_loop, float>(
+	      alias(), "loop_bw",
+	      &control_loop::get_loop_bandwidth,
+	      pmt::mp(0.0f), pmt::mp(2.0f), pmt::mp(0.0f),
+	      "", "Loop bandwidth", RPC_PRIVLVL_MIN,
+              DISPTIME | DISPOPTSTRIP)));
+    
+      // Setters
+      add_rpc_variable(
+          rpcbasic_sptr(new rpcbasic_register_set<control_loop, float>(
+	      alias(), "loop bw",
+	      &control_loop::set_loop_bandwidth,
+	      pmt::mp(0.0f), pmt::mp(1.0f), pmt::mp(0.0f),
+	      "", "Loop bandwidth",
+	      RPC_PRIVLVL_MIN, DISPNULL)));
+#endif /* GR_CTRLPORT */
+    }
+    
 
   } /* namespace digital */
 } /* namespace gr */

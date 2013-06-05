@@ -23,11 +23,13 @@
 		<name>Minimum Freq Deviation</name>
 		<key>fmin</key>
 		<type>real</type>
+                <hide>part</hide>
 	</param>
 	<param>
 		<name>Maximum Freq Deviation</name>
 		<key>fmax</key>
 		<type>real</type>
+                <hide>part</hide>
 	</param>
 	<sink>
 		<name>in</name>
@@ -36,21 +38,6 @@
 	<source>
 		<name>out</name>
 		<type>byte</type>
-	</source>
-	<source>
-		<name>error</name>
-		<type>float</type>
-		<optional>1</optional>
-	</source>
-	<source>
-		<name>phase</name>
-		<type>float</type>
-		<optional>1</optional>
-	</source>
-	<source>
-		<name>frequency</name>
-		<type>float</type>
-		<optional>1</optional>
 	</source>
 	<source>
 		<name>symbol</name>

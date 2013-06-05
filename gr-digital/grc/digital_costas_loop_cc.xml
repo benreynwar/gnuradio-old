@@ -28,11 +28,4 @@
 		<name>out</name>
 		<type>complex</type>
 	</source>
-
-	<!-- Optional Outputs -->
-	<source>
-		<name>frequency</name>
-		<type>float</type>
-		<optional>1</optional>
-	</source>
 </block>
