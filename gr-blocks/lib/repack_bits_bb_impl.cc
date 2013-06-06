@@ -49,6 +49,16 @@ namespace gr {
       if (d_k > 8 || d_k < 1 || d_l > 8 || d_l < 1) {
         throw std::invalid_argument("k and l must be in [1, 8]");
       }
+      message_port_register_in(pmt::mp("set_n_input_bits"));
+      set_msg_handler(
+        pmt::mp("set_n_input_bits"),
+        boost::bind(&repack_bits_bb_impl::handle_set_n_input_bits,
+                    this, _1));
+      message_port_register_in(pmt::mp("set_n_output_bits"));
+      set_msg_handler(
+        pmt::mp("set_n_output_bits"),
+        boost::bind(&repack_bits_bb_impl::handle_set_n_output_bits,
+                    this, _1));
 
       set_relative_rate((double) d_k / d_l);
     }
@@ -66,6 +76,26 @@ namespace gr {
       }
 
       return n_out_bytes_required;
+    }
+
+    void
+    repack_bits_bb_impl::handle_set_n_input_bits (pmt::pmt_t k_pmt) {
+      set_n_input_bits((unsigned int)pmt::to_long(k_pmt));
+    }
+
+    void
+    repack_bits_bb_impl::handle_set_n_output_bits (pmt::pmt_t l_pmt) {
+      set_n_output_bits((unsigned int)pmt::to_long(l_pmt));
+    }
+
+    void
+    repack_bits_bb_impl::set_n_input_bits (unsigned int k) {
+      d_k = k;
+    }
+
+    void
+    repack_bits_bb_impl::set_n_output_bits (unsigned int l) {
+      d_l = l;
     }
 
     int

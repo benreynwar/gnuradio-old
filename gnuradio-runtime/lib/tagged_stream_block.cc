@@ -63,6 +63,7 @@ namespace gr {
   {
     for(unsigned i = 0; i < tags.size(); i++) {
       for(unsigned k = 0; k < tags[i].size(); k++) {
+        dispatch_msg(tags[i][k].key, tags[i][k].value);
         if(tags[i][k].key == d_length_tag_key) {
           n_input_items_reqd[i] = pmt::to_long(tags[i][k].value);
           remove_item_tag(i, tags[i][k]);
