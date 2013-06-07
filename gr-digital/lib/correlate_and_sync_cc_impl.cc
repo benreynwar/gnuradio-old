@@ -30,62 +30,39 @@
 #include <volk/volk.h>
 #include <boost/format.hpp>
 #include <boost/math/special_functions/round.hpp>
+#include <gnuradio/filter/pfb_arb_resampler.h>
+#include <gnuradio/filter/firdes.h>
 
 namespace gr {
   namespace digital {
 
     correlate_and_sync_cc::sptr
     correlate_and_sync_cc::make(const std::vector<gr_complex> &symbols,
-                                const std::vector<gr_complex> &filter,
-                                unsigned int sps)
+                                const std::vector<float> &filter,
+                                unsigned int sps, unsigned int nfilts)
     {
       return gnuradio::get_initial_sptr
-        (new correlate_and_sync_cc_impl(symbols, filter, sps));
+        (new correlate_and_sync_cc_impl(symbols, filter, sps, nfilts));
     }
 
     correlate_and_sync_cc_impl::correlate_and_sync_cc_impl(const std::vector<gr_complex> &symbols,
-                                                           const std::vector<gr_complex> &filter,
-                                                           unsigned int sps)
+                                                           const std::vector<float> &filter,
+                                                           unsigned int sps, unsigned int nfilts)
       : sync_block("correlate_and_sync_cc",
                    io_signature::make(1, 1, sizeof(gr_complex)),
                    io_signature::make(2, 2, sizeof(gr_complex)))
     {
       d_last_index = 0;
-
       d_sps = sps;
-      int nt = filter.size() / sps;
-      std::vector<kernel::fir_filter_ccc*> mf;
-      std::vector<std::vector<gr_complex> > taps(sps);
-      std::vector<gr_complex> vtaps(nt+1, 0);
-      std::vector<gr_complex> padding((nt+1)/2, 0);
+
+      std::vector<gr_complex> padding((filter.size()/nfilts + 1)/2, 0);
       std::vector<gr_complex> padded_symbols = symbols;
       padded_symbols.insert(padded_symbols.begin(), padding.begin(), padding.end());
 
-      for(unsigned n = 0; n < sps; n++) {
-        mf.push_back(new kernel::fir_filter_ccc(1,vtaps));
-	taps[n].resize(nt+1);
-      }
-      for(size_t i = 0; i < filter.size(); i++) {
-	taps[i % sps][i / sps] = filter[i];
-      }
-      for(unsigned n = 0; n < sps; n++) {
-	mf[n]->set_taps(taps[n]);
-      }
-
-      std::string printable = "";
-      size_t j = 0;
-      d_symbols.resize(sps*padded_symbols.size());
-      for(size_t i = 0; i < symbols.size(); i++) {
-	for(size_t nf = 0; nf < sps; nf++) {
-	  d_symbols[j + nf] = mf[nf]->filter(&padded_symbols[i]);
-          printable += str(boost::format("%1% + %2%j, ") 
-                           % d_symbols[j + nf].real() % d_symbols[j + nf].imag());
-	}
-	j += sps;
-      }
-
-      //GR_LOG_DEBUG(d_logger, printable);
-
+      d_symbols.resize(d_sps*symbols.size());
+      filter::kernel::pfb_arb_resampler_ccf resamp(d_sps, filter, nfilts);
+      resamp.filter(&d_symbols[0], &padded_symbols[0], d_sps*symbols.size());
+      
       std::reverse(d_symbols.begin(), d_symbols.end());
       d_thresh = 0.9*powf((float)d_symbols.size(), 2.0f);
 

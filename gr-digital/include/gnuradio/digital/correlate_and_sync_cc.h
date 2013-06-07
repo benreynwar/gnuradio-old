@@ -56,8 +56,8 @@ namespace gr {
        * \param sps     Samples per symbol
        */
       static sptr make(const std::vector<gr_complex> &symbols,
-                       const std::vector<gr_complex> &filter,
-                       unsigned int sps);
+                       const std::vector<float> &filter,
+                       unsigned int sps, unsigned int nfilts=32);
 
       virtual std::vector<gr_complex> symbols() const = 0;
       virtual void set_symbols(const std::vector<gr_complex> &symbols) = 0;
