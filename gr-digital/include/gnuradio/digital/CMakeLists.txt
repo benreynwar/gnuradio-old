@@ -86,6 +86,7 @@ install(FILES
     constellation_receiver_cb.h
     correlate_access_code_bb.h
     correlate_access_code_tag_bb.h
+    correlate_and_sync_cc.h
     costas_loop_cc.h
     cpmmod_bc.h
     crc32.h

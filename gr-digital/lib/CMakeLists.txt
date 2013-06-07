@@ -122,6 +122,7 @@ list(APPEND digital_sources
     constellation_receiver_cb_impl.cc
     correlate_access_code_bb_impl.cc
     correlate_access_code_tag_bb_impl.cc
+    correlate_and_sync_cc_impl.cc
     costas_loop_cc_impl.cc
     cpmmod_bc_impl.cc
     crc32.cc

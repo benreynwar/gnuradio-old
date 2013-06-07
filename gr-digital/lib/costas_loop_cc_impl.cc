@@ -29,6 +29,7 @@
 #include <gnuradio/expj.h>
 #include <gnuradio/sincos.h>
 #include <gnuradio/math.h>
+#include <boost/format.hpp>
 
 namespace gr {
   namespace digital {
@@ -130,9 +131,21 @@ namespace gr {
       bool write_foptr = output_items.size() >= 2;
 
       gr_complex nco_out;
-  
+
+      std::vector<tag_t> tags;
+      get_tags_in_range(tags, 0, nitems_read(0),
+                        nitems_read(0)+noutput_items,
+                        pmt::intern("phase_est"));
+      
       if(write_foptr) {
         for(int i = 0; i < noutput_items; i++) {
+          if(tags.size() > 0) {
+            if(tags[0].offset-nitems_read(0) == (size_t)i) {
+              d_phase = (float)pmt::to_double(tags[0].value);
+              tags.erase(tags.begin());
+            }
+          }
+          
           nco_out = gr_expj(-d_phase);
           optr[i] = iptr[i] * nco_out;
 
@@ -142,11 +155,21 @@ namespace gr {
           advance_loop(d_error);
           phase_wrap();
           frequency_limit();
+
           foptr[i] = d_freq;
         } 
       }
       else {
         for(int i = 0; i < noutput_items; i++) {
+          if(tags.size() > 0) {
+            if(tags[0].offset-nitems_read(0) == (size_t)i) {
+              d_phase = (float)pmt::to_double(tags[0].value);
+              set_frequency(0);
+              tags.erase(tags.begin());
+              //GR_LOG_DEBUG(d_logger, boost::format("%1% NEW PHASE: %2%") % (nitems_read(0)+i) % d_phase);
+            }
+          }
+
           nco_out = gr_expj(-d_phase);
           optr[i] = iptr[i] * nco_out;
 
