@@ -24,7 +24,6 @@
 #define INCLUDED_DIGITAL_CORRELATE_AND_SYNC_CC_IMPL_H
 
 #include <gnuradio/digital/correlate_and_sync_cc.h>
-//#include <gnuradio/filter/fft_filter.h>
 #include <gnuradio/filter/fir_filter.h>
 
 using namespace gr::filter;
@@ -37,6 +36,7 @@ namespace gr {
     private:
       std::vector<gr_complex> d_symbols;
       unsigned int d_sps;
+      float d_center_first_symbol;
       float d_thresh;
       kernel::fir_filter_ccc  *d_filter;
 

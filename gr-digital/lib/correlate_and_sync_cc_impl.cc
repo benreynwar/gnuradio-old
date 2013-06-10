@@ -55,16 +55,37 @@ namespace gr {
       d_last_index = 0;
       d_sps = sps;
 
-      std::vector<gr_complex> padding((filter.size()/nfilts + 1)/2, 0);
+      // The number of complete filters that can be made.
+      unsigned int complete_filters = filter.size()/nfilts;
+      // The number of extra 0's required to pad it to a multiple of nfilts.
+      unsigned int extras = filter.size() - complete_filters*nfilts;
+      std::vector<float> padded_filter = filter;
+      if (extras % 2 == 0) {
+        std::vector<float> padding(extras/2, 0);
+        padded_filter.insert(padded_filter.begin(), padding.begin(), padding.end());
+        padded_filter.insert(padded_filter.end(), padding.begin(), padding.end());
+      } else {
+        std::vector<float> padding_start(extras/2+1, 0);
+        std::vector<float> padding_end(extras/2, 0);
+        padded_filter.insert(padded_filter.begin(), padding_start.begin(), padding_start.end());
+        padded_filter.insert(padded_filter.end(), padding_end.begin(), padding_end.end());
+      }
+
+      // We want to add padding to the beginning of the symbols so we can do the convolution of the symbols
+      // with the pulse shape.
+      std::vector<gr_complex> padding(padded_filter.size()/nfilts, 0);
       std::vector<gr_complex> padded_symbols = symbols;
       padded_symbols.insert(padded_symbols.begin(), padding.begin(), padding.end());
+      padded_symbols.insert(padded_symbols.end(), padding.begin(), padding.end());
 
-      d_symbols.resize(d_sps*symbols.size());
-      filter::kernel::pfb_arb_resampler_ccf resamp(d_sps, filter, nfilts);
-      resamp.filter(&d_symbols[0], &padded_symbols[0], d_sps*symbols.size());
-      
+      d_symbols.resize(d_sps*padded_symbols.size());
+      filter::kernel::pfb_arb_resampler_ccf resamp(d_sps, padded_filter, nfilts);
+      resamp.print_taps();
+      resamp.filter(&d_symbols[0], &padded_symbols[0], d_sps*padded_symbols.size());
+
       std::reverse(d_symbols.begin(), d_symbols.end());
       d_thresh = 0.9*powf((float)d_symbols.size(), 2.0f);
+      d_center_first_symbol = (padding.size() + 0.5) * d_sps;
 
       //d_filter = new kernel::fft_filter_ccc(1, d_symbols);
       d_filter = new kernel::fir_filter_ccc(1, d_symbols);
@@ -72,10 +93,10 @@ namespace gr {
       set_history(d_filter->ntaps());
 
       const int alignment_multiple =
-	volk_get_alignment() / sizeof(gr_complex);
+        volk_get_alignment() / sizeof(gr_complex);
       set_alignment(std::max(1,alignment_multiple));
     }
-
+    
     correlate_and_sync_cc_impl::~correlate_and_sync_cc_impl()
     {
       delete d_filter;
@@ -106,6 +127,9 @@ namespace gr {
       gr_complex *out = (gr_complex*)output_items[0];
       gr_complex *corr = (gr_complex*)output_items[1];
 
+      // FIXME: Shouldn't copy last filter worth of data across.
+      // We want to process this again on next call to work.
+      // This would prevent the preamble falling across two work functions.
       memcpy(out, in, sizeof(gr_complex)*noutput_items);
       //d_filter->filter(noutput_items, corr, in);
       d_filter->filterN(corr, in, noutput_items);
@@ -113,36 +137,26 @@ namespace gr {
       std::vector<float> corr_mag(noutput_items);
       volk_32fc_magnitude_squared_32f(&corr_mag[0], corr, noutput_items);
 
-      //for(int i = 0; i < noutput_items; i++) {
       int i = 0;
       while(i < noutput_items) {
-        if(corr_mag[i] > d_thresh) {
+
+        if ((corr_mag[i] > d_thresh) && (corr_mag[i+1] > corr_mag[i]) && (corr_mag[i+1] > corr_mag[i+2])) {
           float nom = 0, den = 0;
           for(int s = 0; s < 3; s++) {
-            //GR_LOG_DEBUG(d_logger, boost::format("%1%:  %2%") % (i+s-1) % corr_mag[i+s]);
             nom += (s+1)*corr_mag[i+s];
             den += corr_mag[i+s];
           }
-
           float center = nom / den;
           int index = i+1;
-
-          float distance = (d_symbols.size() - 1.0) / 2.0;
-          distance /= d_sps;
-          distance = distance - int(distance);
-
-          center = (center - 2.0) + distance;
-          if(center > d_sps/2)
+          center = - (center - 2.0) - d_center_first_symbol;
+          while (center < d_sps/2)
+            center += d_sps;
+          while (center > d_sps/2)
             center -= d_sps;
-          //if(center < 0)
-          //  center += 1;
+          
           GR_LOG_DEBUG(d_logger, boost::format("index: %1%:  %2%") 
                        % (nitems_written(0) + index) % center);
 
-          //int diff = nitems_written(0) + index - d_last_index;
-          //GR_LOG_DEBUG(d_logger, boost::format("diff: %1%") % (diff));
-          //d_last_index = index + nitems_written(0);
-          
           float phase = fast_atan2f(corr[index].imag(), corr[index].real());
           add_item_tag(0, nitems_written(0) + index, pmt::intern("phase_est"),
                        pmt::from_double(phase), pmt::intern(alias()));
@@ -160,8 +174,6 @@ namespace gr {
 
       return noutput_items;
     }
-
-    //[1,-1,1,-1,1,1,-1,-1,1,1,-1,1,1,1,-1,1,1,-1,1,-1,-1,1,-1,-1,1,1,1,-1,-1,-1,1,-1,1,1,1,1,-1,-1,1,-1,1,-1,-1,-1,1,1,-1,-1,-1,-1,1,-1,-1,-1,-1,-1,1,1,1,1,1,1,-1,-1]
 
   } /* namespace digital */
 } /* namespace gr */
