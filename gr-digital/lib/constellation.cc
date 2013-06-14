@@ -361,22 +361,29 @@ namespace gr {
       sector = real_sector * n_imag_sectors + imag_sector;
       return sector;
     }
-    
-    unsigned int
-    constellation_rect::calc_sector_value(unsigned int sector)
+
+    gr_complex
+    constellation_rect::calc_sector_center(unsigned int sector)
     {
       unsigned int real_sector, imag_sector;
       gr_complex sector_center;
-      unsigned int closest_point;
       real_sector = float(sector)/n_imag_sectors;
       imag_sector = sector - real_sector * n_imag_sectors;
       sector_center = gr_complex(
         (real_sector + 0.5 - n_real_sectors/2.0) * d_width_real_sectors,
         (imag_sector + 0.5 - n_imag_sectors/2.0) * d_width_imag_sectors);
+      return sector_center;
+    }
+    
+    unsigned int
+    constellation_rect::calc_sector_value(unsigned int sector)
+    {
+      gr_complex sector_center = calc_sector_center(sector);
+      unsigned int closest_point;
       closest_point = get_closest_point(&sector_center);
       return closest_point;
     }
-    
+
     /********************************************************************/
     
     constellation_expl_rect::sptr 
