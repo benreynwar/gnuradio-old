@@ -1,6 +1,6 @@
 /* -*- c++ -*- */
 /*
- * Copyright 2011,2012 Free Software Foundation, Inc.
+ * Copyright 2011,2012,2013 Free Software Foundation, Inc.
  *
  * This file is part of GNU Radio
  *
@@ -28,7 +28,9 @@
 #include <gnuradio/io_signature.h>
 #include <gnuradio/math.h>
 #include <gnuradio/expj.h>
+#include <gnuradio/tag_checker.h>
 #include <stdexcept>
+#include <iostream>
 
 namespace gr {
   namespace digital {
@@ -42,7 +44,7 @@ namespace gr {
 				    float loop_bw, float fmin, float fmax)
     {
       return gnuradio::get_initial_sptr
-	(new constellation_receiver_cb_impl(constell, loop_bw,
+        (new constellation_receiver_cb_impl(constell, loop_bw,
 					    fmin, fmax));
     }
 
@@ -53,12 +55,17 @@ namespace gr {
       : block("constellation_receiver_cb",
               io_signature::make(1, 1, sizeof(gr_complex)),
               io_signature::makev(1, 5, iosig)),
-	blocks::control_loop(loop_bw, fmax, fmin),
-	d_constellation(constellation),
-	d_current_const_point(0)
+        blocks::control_loop(loop_bw, fmax, fmin),
+        d_constellation(constellation),
+        d_current_const_point(0)
     {
       if(d_constellation->dimensionality() != 1)
-	throw std::runtime_error("This receiver only works with constellations of dimension 1.");
+        throw std::runtime_error("This receiver only works with constellations of dimension 1.");
+      message_port_register_in(pmt::mp("set_constellation"));
+      set_msg_handler(
+        pmt::mp("set_constellation"),
+        boost::bind(&constellation_receiver_cb_impl::handle_set_constellation,
+                    this, _1));
     }
 
     constellation_receiver_cb_impl::~constellation_receiver_cb_impl()
@@ -78,6 +85,29 @@ namespace gr {
 	     d_constellation->points()[d_current_const_point].real(),
 	     d_constellation->points()[d_current_const_point].imag());
 #endif
+    }
+
+    void
+    constellation_receiver_cb_impl::set_phase_freq(float phase, float freq)
+    {
+      d_phase = phase;
+      d_freq = freq;
+    }
+
+    void
+    constellation_receiver_cb_impl::handle_set_constellation(pmt::pmt_t constellation_pmt)
+    {
+      boost::any constellation_any = pmt::any_ref(constellation_pmt);
+      constellation_sptr constellation = boost::any_cast<constellation_sptr>(
+        constellation_any);
+      set_constellation(constellation);
+    }
+
+    
+    void
+    constellation_receiver_cb_impl::set_constellation(constellation_sptr constellation)
+    {
+      d_constellation = constellation;
     }
 
     int
@@ -104,23 +134,36 @@ namespace gr {
         out_symbol = (gr_complex*)output_items[4];
       }
 
+      std::vector<tag_t> tags;
+      get_tags_in_range(tags, 0, nitems_read(0), nitems_read(0)+ninput_items[0]);
+      tag_checker tchecker(tags);
+
       while((i < noutput_items) && (i < ninput_items[0])) {
-	sample = in[i];
-	nco = gr_expj(d_phase);   // get the NCO value for derotating the current sample
-	sample = nco*sample;      // get the downconverted symbol
 
-	sym_value = d_constellation->decision_maker_pe(&sample, &phase_error);
-	phase_error_tracking(phase_error);  // corrects phase and frequency offsets
-
-	out[i] = sym_value;
-
-	if(output_items.size() == 2) {
+        std::vector<tag_t> tags_now;
+        tchecker.get_tags(tags_now, i+nitems_read(0));
+        for (unsigned int j=0; j<tags_now.size(); j++) {
+          tag_t tag = tags_now[j];
+          dispatch_msg(tag.key, tag.value);
+        }
+        
+        sample = in[i];
+        nco = gr_expj(d_phase);   // get the NCO value for derotating the current sample
+        sample = nco*sample;      // get the downconverted symbol
+        
+        sym_value = d_constellation->decision_maker_pe(&sample, &phase_error);
+        phase_error_tracking(phase_error);  // corrects phase and frequency offsets
+        
+        out[i] = sym_value;
+        
+        if(output_items.size() == 2) {
           out_err[i] = phase_error;
           out_phase[i] = d_phase;
           out_freq[i] = d_freq;
-	  out_symbol[i] = sample;
-	}
-	i++;
+          out_symbol[i] = sample;
+        }
+        i++;
+        
       }
 
       consume_each(i);
