@@ -81,7 +81,8 @@ namespace gr {
       d_symbols.resize(d_sps*padded_symbols.size());
       filter::kernel::pfb_arb_resampler_ccf resamp(d_sps, padded_filter, nfilts);
       resamp.print_taps();
-      resamp.filter(&d_symbols[0], &padded_symbols[0], d_sps*padded_symbols.size());
+      int nread;
+      resamp.filter(&d_symbols[0], &padded_symbols[0], d_sps*padded_symbols.size(), nread);
 
       std::reverse(d_symbols.begin(), d_symbols.end());
       d_thresh = 0.9*powf((float)d_symbols.size(), 2.0f);
