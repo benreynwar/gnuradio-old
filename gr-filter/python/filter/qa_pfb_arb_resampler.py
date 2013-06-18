@@ -21,7 +21,6 @@
 #
 
 from gnuradio import gr, gr_unittest, filter, blocks
-
 import math
 import pylab
 
