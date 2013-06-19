@@ -417,20 +417,15 @@ namespace gr {
         int adjuster = 0;
         if(tags.size() > 0) {
           size_t offset = tags[0].offset-nitems_read(0);
-          if(offset >= (size_t)count) {
+          if((offset >= (size_t)count) && (offset < (size_t)(count + d_sps))) {
             float center = (float)pmt::to_double(tags[0].value);
             tags.erase(tags.begin());
-            //GR_LOG_DEBUG(d_logger, boost::format("old k: %1%") % d_k);
-            //d_k = (d_nfilters * center);
             float c = boost::math::round(center);
             float delta = center - c;
-            d_k = (delta + 0.5) * d_nfilters - d_nfilters/2;
-            if(d_k < 0)
-              d_k = 0;
-            count = (d_taps_per_filter - 1)/2.0 - c;
 
-            GR_LOG_DEBUG(d_logger, boost::format("%1% (%2%) count: %3%  d_k: %4%  center: %5%") 
-                         % i % (nitems_read(0)+i) % count % d_k % center);
+            d_k = (offset-count - d_sps/2.0) * d_nfilters + (M_PI*center*d_nfilters);
+            GR_LOG_DEBUG(d_logger, boost::format("nitems_read: %1%  offset: %2%  count: %3%  center: %4% -->  k: %5%") \
+                         % nitems_read(0) % offset % count % center % d_k);
           }
         }
         
@@ -465,6 +460,8 @@ namespace gr {
 
 	  // We've run out of output items we can create; return now.
 	  if(i+d_out_idx >= noutput_items) {
+            //GR_LOG_DEBUG(d_logger, boost::format("noutput_items: %3%   consuming: %1%    returning: %2%") 
+            //             % count % i % noutput_items);
 	    consume_each(count);
 	    return i;
 	  }
