@@ -80,7 +80,7 @@ class test_correlate_and_sync(gr_unittest.TestCase):
         if offset is None:
             raise ValueError("No tags found.")
         # Detect where the middle of the preamble is.
-        # Assume we have only one peak and that is symmetric.
+        # Assume we have only one peak and that it is symmetric.
         sum_id = 0
         sum_d = 0
         for i, d in enumerate(data):

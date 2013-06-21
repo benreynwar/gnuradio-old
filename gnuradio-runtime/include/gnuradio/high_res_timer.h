@@ -22,6 +22,27 @@
 #ifndef INCLUDED_GNURADIO_HIGH_RES_TIMER_H
 #define INCLUDED_GNURADIO_HIGH_RES_TIMER_H
 
+#include <gnuradio/api.h>
+
+////////////////////////////////////////////////////////////////////////
+// Use architecture defines to determine the implementation
+////////////////////////////////////////////////////////////////////////
+#if defined(linux) || defined(__linux) || defined(__linux__)
+    #define GNURADIO_HRT_USE_CLOCK_GETTIME
+    #include <ctime>
+#elif defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+    #define GNURADIO_HRT_USE_QUERY_PERFORMANCE_COUNTER
+#elif defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
+    #define GNURADIO_HRT_USE_MACH_ABSOLUTE_TIME
+#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+    #define GNURADIO_HRT_USE_CLOCK_GETTIME
+    #include <ctime>
+#else
+    #define GNURADIO_HRT_USE_MICROSEC_CLOCK
+#endif
+
+
+////////////////////////////////////////////////////////////////////////
 namespace gr {
 
     //! Typedef for the timer tick count
@@ -30,36 +51,33 @@ namespace gr {
     //! Get the current time in ticks
     high_res_timer_type high_res_timer_now(void);
 
+    //! Get the current time in ticks - for performance monitoring
+    high_res_timer_type high_res_timer_now_perfmon(void);
+
     //! Get the number of ticks per second
     high_res_timer_type high_res_timer_tps(void);
 
     //! Get the tick count at the epoch
     high_res_timer_type high_res_timer_epoch(void);
 
+#ifdef GNURADIO_HRT_USE_CLOCK_GETTIME
+    //! storage for high res timer type
+    GR_RUNTIME_API extern clockid_t high_res_timer_source;
+#endif
+
 } /* namespace gr */
 
 ////////////////////////////////////////////////////////////////////////
-// Use architecture defines to determine the implementation
-////////////////////////////////////////////////////////////////////////
-#if defined(linux) || defined(__linux) || defined(__linux__)
-    #define GNURADIO_HRT_USE_CLOCK_GETTIME
-#elif defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-    #define GNURADIO_HRT_USE_QUERY_PERFORMANCE_COUNTER
-#elif defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
-    #define GNURADIO_HRT_USE_MACH_ABSOLUTE_TIME
-#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
-    #define GNURADIO_HRT_USE_CLOCK_GETTIME
-#else
-    #define GNURADIO_HRT_USE_MICROSEC_CLOCK
-#endif
-
-////////////////////////////////////////////////////////////////////////
 #ifdef GNURADIO_HRT_USE_CLOCK_GETTIME
-    #include <ctime>
-
     inline gr::high_res_timer_type gr::high_res_timer_now(void){
         timespec ts;
         clock_gettime(CLOCK_MONOTONIC, &ts);
+        return ts.tv_sec*high_res_timer_tps() + ts.tv_nsec;
+    }
+
+    inline gr::high_res_timer_type gr::high_res_timer_now_perfmon(void){
+        timespec ts;
+        clock_gettime(high_res_timer_source, &ts);
         return ts.tv_sec*high_res_timer_tps() + ts.tv_nsec;
     }
 
@@ -74,6 +92,10 @@ namespace gr {
 
     inline gr::high_res_timer_type gr::high_res_timer_now(void){
         return mach_absolute_time();
+    }
+
+    inline gr::high_res_timer_type gr::high_res_timer_now_perfmon(void){
+        return gr::high_res_timer_now();
     }
 
     inline gr::high_res_timer_type gr::high_res_timer_tps(void){
@@ -93,6 +115,10 @@ namespace gr {
         return counts.QuadPart;
     }
 
+    inline gr::high_res_timer_type gr::high_res_timer_now_perfmon(void){
+        return gr::high_res_timer_now();
+    }
+
     inline gr::high_res_timer_type gr::high_res_timer_tps(void){
         LARGE_INTEGER freq;
         QueryPerformanceFrequency(&freq);
@@ -107,6 +133,10 @@ namespace gr {
     inline gr::high_res_timer_type gr::high_res_timer_now(void){
         static const boost::posix_time::ptime epoch(boost::posix_time::from_time_t(0));
         return (boost::posix_time::microsec_clock::universal_time() - epoch).ticks();
+    }
+
+    inline gr::high_res_timer_type gr::high_res_timer_now_perfmon(void){
+        return gr::high_res_timer_now();
     }
 
     inline gr::high_res_timer_type gr::high_res_timer_tps(void){

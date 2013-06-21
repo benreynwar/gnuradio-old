@@ -55,36 +55,23 @@ namespace gr {
       d_last_index = 0;
       d_sps = sps;
 
-      // The number of complete filters that can be made.
-      unsigned int complete_filters = filter.size()/nfilts;
-      // The number of extra 0's required to pad it to a multiple of nfilts.
-      unsigned int extras = filter.size() - complete_filters*nfilts;
-      std::vector<float> padded_filter = filter;
-      if (extras % 2 == 0) {
-        std::vector<float> padding(extras/2, 0);
-        padded_filter.insert(padded_filter.begin(), padding.begin(), padding.end());
-        padded_filter.insert(padded_filter.end(), padding.begin(), padding.end());
-      } else {
-        std::vector<float> padding_start(extras/2+1, 0);
-        std::vector<float> padding_end(extras/2, 0);
-        padded_filter.insert(padded_filter.begin(), padding_start.begin(), padding_start.end());
-        padded_filter.insert(padded_filter.end(), padding_end.begin(), padding_end.end());
-      }
-
-      // We want to add padding to the beginning of the symbols so we can do the convolution of the symbols
-      // with the pulse shape.
-      std::vector<gr_complex> padding(padded_filter.size()/nfilts, 0);
+      // We want to add padding to the beginning of the symbols so we
+      // can do the convolution of the symbols with the pulse shape.
+      std::vector<gr_complex> padding((1+filter.size()/nfilts)/2, 0);
       std::vector<gr_complex> padded_symbols = symbols;
       padded_symbols.insert(padded_symbols.begin(), padding.begin(), padding.end());
-      padded_symbols.insert(padded_symbols.end(), padding.begin(), padding.end());
 
-      d_symbols.resize(d_sps*padded_symbols.size());
-      filter::kernel::pfb_arb_resampler_ccf resamp(d_sps, padded_filter, nfilts);
-      resamp.print_taps();
-      resamp.filter(&d_symbols[0], &padded_symbols[0], d_sps*padded_symbols.size());
-
+      d_symbols.resize(d_sps*symbols.size(), 0);
+      filter::kernel::pfb_arb_resampler_ccf resamp(d_sps, filter, nfilts);
+      int nread;
+      resamp.filter(&d_symbols[0], &padded_symbols[0], symbols.size(), nread);
       std::reverse(d_symbols.begin(), d_symbols.end());
-      d_thresh = 0.9*powf((float)d_symbols.size(), 2.0f);
+
+      float corr = 0;
+      for(size_t i=0; i < d_symbols.size(); i++)
+        corr += abs(d_symbols[i]*d_symbols[i]);
+      d_thresh = 0.9*corr*corr;
+
       d_center_first_symbol = (padding.size() + 0.5) * d_sps;
 
       //d_filter = new kernel::fft_filter_ccc(1, d_symbols);
@@ -131,31 +118,41 @@ namespace gr {
       // We want to process this again on next call to work.
       // This would prevent the preamble falling across two work functions.
       memcpy(out, in, sizeof(gr_complex)*noutput_items);
+
+      // Calculate the correlation with the known symbol
       //d_filter->filter(noutput_items, corr, in);
       d_filter->filterN(corr, in, noutput_items);
       
+      // Find the magnitude squared of the correlation
       std::vector<float> corr_mag(noutput_items);
       volk_32fc_magnitude_squared_32f(&corr_mag[0], corr, noutput_items);
 
-      int i = 0;
+      int i = d_sps;
       while(i < noutput_items) {
+        if((corr_mag[i] - corr_mag[i-d_sps]) > d_thresh) {
+          while(corr_mag[i] < corr_mag[i+1])
+            i++;
 
-        if ((corr_mag[i] > d_thresh) && (corr_mag[i+1] > corr_mag[i]) && (corr_mag[i+1] > corr_mag[i+2])) {
           float nom = 0, den = 0;
           for(int s = 0; s < 3; s++) {
-            nom += (s+1)*corr_mag[i+s];
-            den += corr_mag[i+s];
+            nom += (s+1)*corr_mag[i+s-1];
+            den += corr_mag[i+s-1];
           }
           float center = nom / den;
-          int index = i+1;
-          center = - (center - 2.0) - d_center_first_symbol;
-          while (center < d_sps/2)
-            center += d_sps;
-          while (center > d_sps/2)
-            center -= d_sps;
-          
-          GR_LOG_DEBUG(d_logger, boost::format("index: %1%:  %2%") 
-                       % (nitems_written(0) + index) % center);
+          center = (center - 2.0);
+
+          // Fudge factor due to some fractional phase delay by one of the filters.
+          // FIXME: figure out how to calculate this and where it
+          // should be calculated (might be a result of the
+          // pfb_clock_sync block, and if so, the correction should be
+          // made there.)
+          center += 0.035;
+
+          int index = i;
+
+          GR_LOG_DEBUG(d_logger, boost::format("index: %1%:  center: %2%   corr: %3%") 
+                       % (nitems_written(0) + index) % center % corr_mag[i]);
+
 
           float phase = fast_atan2f(corr[index].imag(), corr[index].real());
           add_item_tag(0, nitems_written(0) + index, pmt::intern("phase_est"),
