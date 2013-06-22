@@ -264,7 +264,7 @@ namespace gr {
 			 float width_imag_sectors);
 
       unsigned int get_sector(const gr_complex *sample);
-  
+      gr_complex calc_sector_center(unsigned int sector);
       unsigned int calc_sector_value(unsigned int sector);
 
     private:

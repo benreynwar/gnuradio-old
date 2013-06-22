@@ -44,7 +44,7 @@ namespace gr {
     constellation::constellation(std::vector<gr_complex> constell,
                                  std::vector<int> pre_diff_code,
                                  unsigned int rotational_symmetry,
-                                 unsigned int dimensionality,
+                                 unsigned int dimensionality
     ) :
       d_constellation(constell),
       d_pre_diff_code(pre_diff_code),
